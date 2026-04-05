@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mycine | Official</title>
+    
+    <script src="https://pl29065317.profitablecpmratenetwork.com/bd/47/8d/bd478d3446bde66889d3b2efd42713b3.js"></script>
+    
+    <script src="https://pl29068783.profitablecpmratenetwork.com/04/97/ee/0497eebd48df7404a46f6904922a72f4.js"></script>
+    
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -62,10 +67,11 @@
         .toggle-text { color: #888; font-size: 13px; margin-top: 10px; cursor: pointer; }
         .toggle-text span { color: var(--red); font-weight: bold; }
 
-        .genre-container { padding: 0 0 40px 0; } /* Adjusted padding for slide */
-        .genre-row { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 15px; scrollbar-width: none; }
+        .genre-container { padding: 0 20px; margin-bottom: 40px; }
+        .genre-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; }
         .genre-chip { background: var(--card); padding: 10px 18px; border-radius: 12px; border: 1px solid #333; font-size: 13px; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .genre-chip.active { background: var(--red); border-color: var(--red); }
+        .genre-movies-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
 
         #movie-page { position: fixed; inset: 0; background: var(--bg); z-index: 2000; overflow-y: auto; display: none; }
         .m-header-bg { width: 100%; height: 350px; background-size: cover; background-position: center; position: relative; }
@@ -113,9 +119,7 @@
         <div class="sec-label">Browse Genres</div>
         <div class="genre-container">
             <div class="genre-row" id="genre-chips"></div>
-            <div class="swiper genre-movies-swiper" style="padding:0 20px; margin-top: 15px;">
-                <div class="swiper-wrapper" id="genre-movie-list"></div>
-            </div>
+            <div class="genre-movies-grid" id="genre-movie-list"></div>
         </div>
     </div>
 
@@ -225,7 +229,6 @@
     const IMG = 'https://image.tmdb.org/t/p/w500';
     const BK = 'https://image.tmdb.org/t/p/w1280';
     let isSignUpMode = false; let currentId = ''; let currentType = ''; 
-    let genreSwiper = null; // To store swiper instance
 
     let vjsPlayer = videojs('my-vjs-player');
 
@@ -250,7 +253,7 @@
     function showProfile(u) { 
         document.getElementById('auth-ui').style.display = 'none'; 
         document.getElementById('profile-ui').style.display = 'block'; 
-        document.getElementById('locked-options').style.display = 'block'; 
+        document.getElementById('locked-options').style.display = 'block'; // Unlock Menu Options
         document.getElementById('user-display').innerText = u; 
     }
 
@@ -258,7 +261,7 @@
         localStorage.removeItem('mycine_logged_in'); 
         document.getElementById('auth-ui').style.display = 'block'; 
         document.getElementById('profile-ui').style.display = 'none'; 
-        document.getElementById('locked-options').style.display = 'none'; 
+        document.getElementById('locked-options').style.display = 'none'; // Lock Menu Options
     }
 
     function checkExistingLogin() { const u = localStorage.getItem('mycine_logged_in'); if(u) showProfile(u); }
@@ -300,15 +303,7 @@
         new Swiper(".rated-swiper", { slidesPerView: "auto", spaceBetween: 15 });
     }
 
-    async function loadGenreMovies(gid) { 
-        const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API}&with_genres=${gid}`).then(r => r.json()); 
-        // Wrapped items in swiper-slide
-        document.getElementById('genre-movie-list').innerHTML = res.results.map(m => `<div class="swiper-slide poster-card" onclick='openMovie(${m.id}, "movie")'><img src="${IMG}${m.poster_path}"></div>`).join(''); 
-        
-        // Initialize or update the Swiper for genres
-        if (genreSwiper) genreSwiper.destroy();
-        genreSwiper = new Swiper(".genre-movies-swiper", { slidesPerView: "auto", spaceBetween: 15 });
-    }
+    async function loadGenreMovies(gid) { const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${API}&with_genres=${gid}`).then(r => r.json()); document.getElementById('genre-movie-list').innerHTML = res.results.slice(0, 6).map(m => `<div class="poster-card" style="width:100% !important;" onclick='openMovie(${m.id}, "movie")'><img src="${IMG}${m.poster_path}"></div>`).join(''); }
 
     async function openMovie(id, type) {
         currentId = id; currentType = type;
@@ -326,6 +321,9 @@
     async function loadEpisodes(tid, sn) { const res = await fetch(`https://api.themoviedb.org/3/tv/${tid}/season/${sn}?api_key=${API}`).then(r => r.json()); document.getElementById('episodes-grid').innerHTML = res.episodes.map(e => `<div class="ep-btn" onclick="openPlayer('tv', ${tid}, ${sn}, ${e.episode_number})">Ep ${e.episode_number}</div>`).join(''); document.getElementById('play-btn').onclick = () => openPlayer('tv', tid, sn, 1); }
 
     function openPlayer(t, id, s = 1, e = 1) { 
+        // Adsterra Smartlink Activation
+        window.open('https://www.profitablecpmratenetwork.com/uz9pec5xbs?key=39fe1a84d74efd52793d35d10f082868', '_blank');
+
         document.getElementById('player-page').style.display = 'block';
         document.getElementById('my-vjs-player').style.display = 'none';
         document.getElementById('vidking-frame').style.display = 'block';
