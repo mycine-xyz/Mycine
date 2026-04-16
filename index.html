@@ -11,13 +11,16 @@
         :root { --red: #e11d48; --bg: #050208; --card: #121212; --glass: rgba(255,255,255,0.08); --indigo: #6366f1; --green: #22c55e; --gray: #888; }
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 80px; overflow-x: hidden; transition: 0.3s; }
         
-        /* PC Mode Class - Controls Fullscreen Adjustments */
-        body.pc-mode { padding-bottom: 80px; } /* Navigation bar ke liye padding barkarar rakhi */
-        /* body.pc-mode .b-nav { display: none; } <-- Yeh line hata di gayi hai taaki nav bar na chupe */
+        /* PC Mode Class */
+        body.pc-mode { padding-bottom: 80px; }
         body.pc-mode .poster-card { width: 180px !important; }
         body.pc-mode .top10-card { width: 220px !important; }
         body.pc-mode .top10-img { width: 180px !important; height: 260px !important; }
-        body.pc-mode #search-results { grid-template-columns: repeat(6, 1fr) !important; }
+        
+        /* Updated Search Results for PC/Mobile */
+        #search-results { display: flex; flex-direction: column; gap: 12px; padding: 20px; transition: 0.3s; }
+        body.pc-mode #search-results { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+
         body.pc-mode .hero-swiper { height: 650px; }
         body.pc-mode .h-title { font-size: 50px; }
         body.pc-mode .menu-grid { grid-template-columns: repeat(6, 1fr); }
@@ -67,10 +70,18 @@
         .top10-img { width: 130px; height: 190px; border-radius: 10px; object-fit: cover; position: relative; z-index: 2; transition: 0.3s; }
         .poster-card { width: 130px !important; border-radius: 12px; overflow: hidden; aspect-ratio: 2/3; background: #111; cursor: pointer; transition: 0.3s; }
         .poster-card img { width: 100%; height: 100%; object-fit: cover; }
-        .search-box { padding: 80px 20px 20px; }
-        .search-bar { width: 100%; background: var(--card); border: 1px solid #333; padding: 15px; border-radius: 15px; color: white; outline: none; }
-        #search-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; transition: 0.3s; }
         
+        /* List Search UI */
+        .search-box { padding: 80px 20px 10px; }
+        .search-bar { width: 100%; background: var(--card); border: 1px solid #333; padding: 15px; border-radius: 15px; color: white; outline: none; }
+        
+        .search-item { display: flex; align-items: center; background: var(--card); border-radius: 12px; padding: 8px; gap: 15px; cursor: pointer; border: 1px solid #1a1a1a; }
+        .search-item img { width: 55px; height: 80px; border-radius: 8px; object-fit: cover; }
+        .s-info { flex-grow: 1; }
+        .s-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .s-meta { font-size: 12px; color: var(--gray); display: flex; align-items: center; gap: 10px; }
+        .s-rate { color: #fbbf24; font-weight: bold; }
+
         /* Auth UI */
         .auth-container { text-align: center; }
         .auth-form { background: var(--card); padding: 25px; border-radius: 20px; border: 1px solid #333; margin-top: 10px; }
@@ -143,7 +154,7 @@
 
     <div id="search-page" class="page">
         <div class="search-box">
-            <input type="text" class="search-bar" id="search-input" placeholder="Search movies or shows..." oninput="searchMovies(this.value)">
+            <input type="text" class="search-bar" id="search-input" placeholder="Search movies, shows or anime..." oninput="searchMovies(this.value)">
         </div>
         <div id="search-results"></div>
     </div>
@@ -250,23 +261,15 @@
     let genreSwiper = null; 
     let vjsPlayer = videojs('my-vjs-player');
 
-    // Toggle Screen Mode Function
     function toggleScreenMode() {
         const body = document.body;
         const icon = document.getElementById('toggle-icon');
         body.classList.toggle('pc-mode');
-        
-        if(body.classList.contains('pc-mode')) {
-            icon.classList.replace('fa-laptop', 'fa-mobile-screen');
-        } else {
-            icon.classList.replace('fa-mobile-screen', 'fa-laptop');
-        }
-        
-        // Refresh Swipers for new dimensions
+        icon.classList.toggle('fa-laptop');
+        icon.classList.toggle('fa-mobile-screen');
         window.dispatchEvent(new Event('resize'));
     }
 
-    // Auth Logic
     function toggleAuthMode() { 
         isSignUpMode = !isSignUpMode; 
         document.getElementById('auth-title').innerText = isSignUpMode ? "Create Account" : "Login"; 
@@ -299,7 +302,6 @@
 
     function checkExistingLogin() { const u = localStorage.getItem('mycine_logged_in'); if(u) showProfile(u); }
 
-    // Page Switcher
     function switchPage(p, n) { 
         document.querySelectorAll('.page').forEach(x => x.classList.remove('active')); 
         document.getElementById(p).classList.add('active'); 
@@ -310,11 +312,33 @@
         window.scrollTo(0,0); 
     }
     
-    // Core Functions
+    // UPDATED SEARCH LOGIC
     async function searchMovies(q) { 
         if(q.length < 2) { document.getElementById('search-results').innerHTML = ''; return; } 
         const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API}&query=${q}`).then(r => r.json()); 
-        document.getElementById('search-results').innerHTML = res.results.map(m => m.poster_path ? `<div class="poster-card" onclick='openMovie(${m.id}, "${m.media_type}")'><img src="${IMG}${m.poster_path}"></div>` : '').join(''); 
+        
+        document.getElementById('search-results').innerHTML = res.results.map(m => {
+            if(!m.poster_path) return '';
+            const title = m.title || m.name;
+            const year = (m.release_date || m.first_air_date || 'N/A').split('-')[0];
+            const type = m.media_type === 'movie' ? 'Movie' : 'Series';
+            const rate = m.vote_average ? m.vote_average.toFixed(1) : 'N/A';
+            
+            return `
+                <div class="search-item" onclick="openMovie(${m.id}, '${m.media_type}')">
+                    <img src="${IMG}${m.poster_path}">
+                    <div class="s-info">
+                        <div class="s-name">${title}</div>
+                        <div class="s-meta">
+                            <span class="s-rate"><i class="fa-solid fa-star"></i> ${rate}</span>
+                            <span>${type}</span>
+                            <span>${year}</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color:#333"></i>
+                </div>
+            `;
+        }).join(''); 
     }
     
     const genreData = [{ id: 28, name: "Action", icon: "fa-fire" }, { id: 35, name: "Comedy", icon: "fa-face-laugh-squint" }, { id: 27, name: "Horror", icon: "fa-ghost" }, { id: 878, name: "Sci-Fi", icon: "fa-rocket" }];
