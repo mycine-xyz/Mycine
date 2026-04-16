@@ -12,8 +12,8 @@
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 80px; overflow-x: hidden; transition: 0.3s; }
         
         /* PC Mode Class - Controls Fullscreen Adjustments */
-        body.pc-mode { padding-bottom: 0; }
-        body.pc-mode .b-nav { display: none; } /* Hide mobile nav in PC mode if preferred */
+        body.pc-mode { padding-bottom: 80px; } /* Navigation bar ke liye padding barkarar rakhi */
+        /* body.pc-mode .b-nav { display: none; } <-- Yeh line hata di gayi hai taaki nav bar na chupe */
         body.pc-mode .poster-card { width: 180px !important; }
         body.pc-mode .top10-card { width: 220px !important; }
         body.pc-mode .top10-img { width: 180px !important; height: 260px !important; }
