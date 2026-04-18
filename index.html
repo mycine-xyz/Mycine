@@ -106,10 +106,15 @@
         .btn-opt { flex-grow: 1; background: var(--card); border: 1px solid #333; color: white; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; padding: 10px; gap: 4px; text-decoration: none; cursor: pointer; }
         
         #ep-selector-section { margin-top: 20px; display: none; }
+        
+        /* Updated Season Styles */
+        .season-row { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; margin-bottom: 5px; }
+        .season-btn { background: var(--card); border: 1px solid #333; color: white; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: 0.3s; }
+        .season-btn.active { background: var(--red); border-color: var(--red); }
+
         .ep-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
         .ep-btn { background: var(--card); border: 1px solid #333; color: white; padding: 10px; border-radius: 10px; text-align: center; font-size: 12px; cursor: pointer; }
         .ep-btn.active { background: var(--red); border-color: var(--red); }
-        .season-select { background: var(--card); color: white; border: 1px solid #333; padding: 10px; border-radius: 10px; width: 100%; margin-bottom: 10px; outline: none; }
         
         #player-page { position: fixed; inset: 0; background: black; z-index: 3000; display: none; }
         .vid-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
@@ -226,8 +231,9 @@
                 <a id="download-link" class="btn-opt" target="_blank"><i class="fa-solid fa-download"></i> Download</a>
             </div>
             <div id="ep-selector-section">
-                <div class="sec-label" style="margin-left:0;">Select Episodes</div>
-                <select id="season-dropdown" class="season-select" onchange="loadEpisodes(currentId, this.value)"></select>
+                <div class="sec-label" style="margin-left:0;">Seasons</div>
+                <div id="season-list" class="season-row"></div>
+                <div class="sec-label" style="margin-left:0;">Episodes</div>
                 <div id="episodes-grid" class="ep-grid"></div>
             </div>
             <div class="sec-label" style="margin-left:0;">Storyline</div>
@@ -260,6 +266,16 @@
     let isSignUpMode = false; let currentId = ''; let currentType = ''; 
     let genreSwiper = null; 
     let vjsPlayer = videojs('my-vjs-player');
+
+    window.addEventListener('popstate', function(event) {
+        if (document.getElementById('player-page').style.display === 'block') {
+            closePlayer(false);
+        } else if (document.getElementById('movie-page').style.display === 'block') {
+            closeMovie(false);
+        } else if (!document.getElementById('home-page').classList.contains('active')) {
+            switchPage('home-page', document.querySelector('.nav-item'), false);
+        }
+    });
 
     function toggleScreenMode() {
         const body = document.body;
@@ -302,17 +318,17 @@
 
     function checkExistingLogin() { const u = localStorage.getItem('mycine_logged_in'); if(u) showProfile(u); }
 
-    function switchPage(p, n) { 
+    function switchPage(p, n, push = true) { 
         document.querySelectorAll('.page').forEach(x => x.classList.remove('active')); 
         document.getElementById(p).classList.add('active'); 
         if(n) { 
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active')); 
             n.classList.add('active'); 
         } 
+        if(push && p !== 'home-page') history.pushState({page: p}, "");
         window.scrollTo(0,0); 
     }
     
-    // UPDATED SEARCH LOGIC
     async function searchMovies(q) { 
         if(q.length < 2) { document.getElementById('search-results').innerHTML = ''; return; } 
         const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API}&query=${q}`).then(r => r.json()); 
@@ -371,32 +387,63 @@
         genreSwiper = new Swiper(".genre-movies-swiper", { slidesPerView: "auto", spaceBetween: 15 });
     }
 
-    async function openMovie(id, type) {
+    async function openMovie(id, type, push = true) {
         currentId = id; currentType = type;
         const [det, cast] = await Promise.all([ fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API}`).then(r => r.json()), fetch(`https://api.themoviedb.org/3/${type}/${id}/credits?api_key=${API}`).then(r => r.json()) ]);
         document.getElementById('m-title').innerText = det.title || det.name; document.getElementById('m-desc').innerText = det.overview; document.getElementById('m-meta').innerText = `⭐ ${det.vote_average.toFixed(1)} • ${det.release_date || det.first_air_date}`; document.getElementById('m-bg-img').style.backgroundImage = `url('${BK}${det.backdrop_path}')`; document.getElementById('actor-list').innerHTML = cast.cast.slice(0, 5).map(c => `<div style="display:flex; align-items:center; background:var(--card); padding:10px; border-radius:12px; margin-bottom:8px;"><img src="${IMG}${c.profile_path}" style="width:40px; height:40px; border-radius:50%; margin-right:12px; object-fit:cover;">${c.name}</div>`).join('');
         document.getElementById('download-link').href = `https://www.google.com/search?q=download+${det.title || det.name}+movie`;
+        
         const epSection = document.getElementById('ep-selector-section');
-        if(type === 'tv') { epSection.style.display = 'block'; let sh = ''; det.seasons.forEach(s => { if(s.season_number > 0) sh += `<option value="${s.season_number}">${s.name}</option>`; }); document.getElementById('season-dropdown').innerHTML = sh; loadEpisodes(id, 1); } 
-        else { epSection.style.display = 'none'; document.getElementById('play-btn').onclick = () => openPlayer(type, id); }
+        if(type === 'tv') { 
+            epSection.style.display = 'block'; 
+            let sh = ''; 
+            det.seasons.forEach(s => { 
+                if(s.season_number > 0) {
+                    sh += `<div class="season-btn ${s.season_number === 1 ? 'active' : ''}" onclick="changeSeason(this, ${id}, ${s.season_number})">${s.name}</div>`;
+                }
+            }); 
+            document.getElementById('season-list').innerHTML = sh; 
+            loadEpisodes(id, 1); 
+        } 
+        else { 
+            epSection.style.display = 'none'; 
+            document.getElementById('play-btn').onclick = () => openPlayer(type, id); 
+        }
         document.getElementById('movie-page').style.display = 'block';
+        if(push) history.pushState({modal: 'movie'}, "");
+    }
+
+    // New Function to handle Season Change with visual effect
+    function changeSeason(btn, tid, sn) {
+        document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadEpisodes(tid, sn);
     }
 
     async function loadEpisodes(tid, sn) { const res = await fetch(`https://api.themoviedb.org/3/tv/${tid}/season/${sn}?api_key=${API}`).then(r => r.json()); document.getElementById('episodes-grid').innerHTML = res.episodes.map(e => `<div class="ep-btn" onclick="openPlayer('tv', ${tid}, ${sn}, ${e.episode_number})">Ep ${e.episode_number}</div>`).join(''); document.getElementById('play-btn').onclick = () => openPlayer('tv', tid, sn, 1); }
 
-    function openPlayer(t, id, s = 1, e = 1) { 
+    function openPlayer(t, id, s = 1, e = 1, push = true) { 
         document.getElementById('player-page').style.display = 'block';
         document.getElementById('my-vjs-player').style.display = 'none';
         document.getElementById('vidking-frame').style.display = 'block';
         const queryParams = `color=e11d48&autoplay=1`;
         let u = (t === 'movie') ? `https://player.videasy.net/movie/${id}?${queryParams}` : `https://player.videasy.net/tv/${id}/${s}/${e}?${queryParams}`;
         document.getElementById('vidking-frame').src = u;
+        if(push) history.pushState({modal: 'player'}, "");
     }
 
-    function closePlayer() { document.getElementById('player-page').style.display = 'none'; document.getElementById('vidking-frame').src = ''; vjsPlayer.pause(); }
-    function closeMovie() { document.getElementById('movie-page').style.display = 'none'; }
+    function closePlayer(pop = true) { 
+        document.getElementById('player-page').style.display = 'none'; 
+        document.getElementById('vidking-frame').src = ''; 
+        vjsPlayer.pause(); 
+        if(pop) history.back();
+    }
+    
+    function closeMovie(pop = true) { 
+        document.getElementById('movie-page').style.display = 'none'; 
+        if(pop) history.back();
+    }
     init();
 </script>
-<script src="https://pl29069658.profitablecpmratenetwork.com/5f/4d/77/5f4d77cc6a382dd74d920de7683981c2.js"></script>
 </body>
 </html>
